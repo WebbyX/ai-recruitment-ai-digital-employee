@@ -1,6 +1,6 @@
 // why: checked before the bundle's other modules load, so an old Node gets a clear message instead of a syntax or API error.
 if (Number(process.versions.node.split('.')[0]) < 20) {
-  process.stderr.write(`nortia-ai-grab needs Node.js 20 or newer; this is ${process.version}.\n`)
+  process.stderr.write(`nortia-ai-digital-employee needs Node.js 20 or newer; this is ${process.version}.\n`)
   process.exit(1)
 }
 

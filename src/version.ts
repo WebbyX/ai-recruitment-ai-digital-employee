@@ -3,7 +3,7 @@ declare const __KIT_NAME__: string | undefined
 
 // why: esbuild `define` injects these into dist/cli.js; tests run the TS sources where they do not exist.
 export const KIT_VERSION: string = typeof __KIT_VERSION__ === 'string' ? __KIT_VERSION__ : '0.0.0'
-export const KIT_NAME: string = typeof __KIT_NAME__ === 'string' ? __KIT_NAME__ : 'nortia-ai-grab'
+export const KIT_NAME: string = typeof __KIT_NAME__ === 'string' ? __KIT_NAME__ : 'nortia-ai-digital-employee'
 
 export function isOlder(current: string, latest: string): boolean {
   const a = current.split('.').map(Number)

@@ -266,7 +266,7 @@ test('when Nortia cannot be reached, this Mac is still cleared and the key prefi
       const out = disconnected(await runDisconnect(depsFor(t, fake.runner, url ? { apiUrl: url } : {})))
       assert.equal(out.nortia, 'unreachable', name)
       assert.equal(out.issues.length, 1)
-      assert.ok(out.issues[0].includes(`${PREFIX}…`) && out.issues[0].includes('Nortia → AI Grab Resume → Keys'), out.issues[0])
+      assert.ok(out.issues[0].includes(`${PREFIX}…`) && out.issues[0].includes('Nortia → AI Digital Employee → Keys'), out.issues[0])
       assert.deepEqual(fake.keychain, {})
       assert.ok(!existsSync(join(t.home, '.nortia')))
       assert.ok(!existsSync(t.task))
@@ -333,8 +333,8 @@ test('a keychain item that will not delete is reported, and the rest still runs'
     const out = disconnected(await runDisconnect(depsFor(t, fake.runner)))
     assert.equal(out.nortia, 'revoked')
     assert.deepEqual(out.issues, [
-      'Remove the saved Nortia key: open Keychain Access, search for nortia-ai-grab and delete it.',
-      'Remove the saved Hiredly password: open Keychain Access, search for nortia-ai-grab and delete it.'
+      'Remove the saved Nortia key: open Keychain Access, search for nortia-ai-digital-employee and delete it.',
+      'Remove the saved Hiredly password: open Keychain Access, search for nortia-ai-digital-employee and delete it.'
     ])
     assert.ok(!existsSync(join(t.home, '.nortia')))
     assert.deepEqual(allowOf(join(t.claudeDir, 'settings.json')).sort(), [...KEPT_RULES].sort())

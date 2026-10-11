@@ -146,7 +146,7 @@ test('check_connection maps a 426 to kit_outdated with the update sentence', asy
   assert.equal(res.status, 'kit_outdated')
   assert.equal(
     res.message,
-    'This Nortia connector is out of date. Open Nortia → AI Grab Resume → Connect and copy the update instructions into Claude.'
+    'This Nortia connector is out of date. Open Nortia → AI Digital Employee → Connect and copy the update instructions into Claude.'
   )
 })
 
@@ -155,5 +155,5 @@ test('check_connection adds the update hint when a newer kit exists', async () =
   const res = await checkConnection({ ...deps(), config: loadConfig({ NORTIA_API_URL: newer.url }) })
   await newer.close()
   assert.equal((res as { update_available?: boolean }).update_available, true)
-  assert.ok(res.message.endsWith('A newer Nortia connector is available — see Nortia → AI Grab Resume → Connect.'))
+  assert.ok(res.message.endsWith('A newer Nortia connector is available — see Nortia → AI Digital Employee → Connect.'))
 })

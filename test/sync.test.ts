@@ -162,7 +162,7 @@ test('a 426 stops the run immediately and nothing is reported', async () => {
   assert.equal(api.count('/api/v1/runs'), 0)
   assert.equal(
     res.message,
-    'This Nortia connector is out of date. Open Nortia → AI Grab Resume → Connect and copy the update instructions into Claude.'
+    'This Nortia connector is out of date. Open Nortia → AI Digital Employee → Connect and copy the update instructions into Claude.'
   )
 })
 

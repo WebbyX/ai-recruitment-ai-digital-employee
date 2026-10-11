@@ -44,7 +44,7 @@ test('a run of four calls reports every call under one run_id and ends on the fo
   assert.equal(results[0].message, 'Batch 1 sent (1 new resumes so far). Call hiredly_sync again.')
   assert.equal(
     results[3].message,
-    'Sent 4 new resumes to Nortia. 0 matched a job; 4 are waiting in Nortia → AI Grab Resume → Resume inbox for you to assign.'
+    'Sent 4 new resumes to Nortia. 0 matched a job; 4 are waiting in Nortia → AI Digital Employee → Resume for you to assign.'
   )
 
   const sent = reports()

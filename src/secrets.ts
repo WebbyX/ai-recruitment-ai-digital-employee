@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 
-export const SERVICE = 'nortia-ai-grab'
+export const SERVICE = 'nortia-ai-digital-employee'
 export const ACCOUNTS = ['nortia_api_key', 'hiredly_password'] as const
 export type Account = (typeof ACCOUNTS)[number]
 

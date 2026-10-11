@@ -18,7 +18,7 @@ function loginSnapshot() {
     try {
       const stdout = execFileSync(
         '/usr/bin/security',
-        ['find-generic-password', '-s', 'nortia-ai-grab', '-a', account, join(homedir(), 'Library/Keychains/login.keychain-db')],
+        ['find-generic-password', '-s', 'nortia-ai-digital-employee', '-a', account, join(homedir(), 'Library/Keychains/login.keychain-db')],
         { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
       )
       return { code: 0, stdout }
@@ -56,7 +56,7 @@ test('real /usr/bin/security round-trip on a throwaway keychain', { skip }, asyn
     }
     assert.equal(await setSecret('hiredly_password', 'a\nb', deps), 'invalid_value')
     assert.equal(await setSecret('hiredly_password', 'x'.repeat(513), deps), 'invalid_value')
-    const where = execFileSync('/usr/bin/security', ['find-generic-password', '-s', 'nortia-ai-grab', '-a', 'hiredly_password', keychain], { encoding: 'utf8' })
+    const where = execFileSync('/usr/bin/security', ['find-generic-password', '-s', 'nortia-ai-digital-employee', '-a', 'hiredly_password', keychain], { encoding: 'utf8' })
     assert.ok(where.includes(`keychain: "${keychain}"`))
     assert.deepEqual(loginSnapshot(), before, 'nothing was written to the login keychain')
   } finally {

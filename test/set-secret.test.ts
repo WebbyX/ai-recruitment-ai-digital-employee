@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { getSecret, setSecret } from '../src/secrets'
+import { deleteSecret, getSecret, hasSecret, setSecret } from '../src/secrets'
 import { fakeRunner, ROOT, runCli, spawnKit, VALID_KEY } from './helpers/harness'
 
 const OSASCRIPT = '/usr/bin/osascript'
@@ -16,7 +16,7 @@ test('--stdin saves a well-formed key and prints only the ok line', async () => 
   assert.equal(res.stderr, '')
   assert.equal(fake.keychain.nortia_api_key, VALID_KEY)
   assert.deepEqual(fake.calls[0].args, ['-i'])
-  assert.ok(fake.calls[0].input!.startsWith('add-generic-password -U -s nortia-ai-grab -a nortia_api_key -w "'))
+  assert.ok(fake.calls[0].input!.startsWith('add-generic-password -U -s nortia-ai-digital-employee -a nortia_api_key -w "'))
   assert.ok(fake.calls.every((c) => !c.args.join(' ').includes(VALID_KEY)), 'the value is never in argv')
 })
 
@@ -155,6 +155,21 @@ test('a failed keychain write reports a code, not the value', async () => {
   assert.equal(res.code, 1)
   assert.deepEqual(JSON.parse(res.stdout), { status: 'error', code: 'keychain_write_failed' })
   assert.ok(!(res.stdout + res.stderr).includes('nrt_'))
+})
+
+test('every keychain call names only the nortia-ai-digital-employee service', async () => {
+  const fake = fakeRunner()
+  const deps = { runner: fake.runner, platform: 'darwin' as const, env: {} }
+  for (const account of ['nortia_api_key', 'hiredly_password'] as const) {
+    assert.equal(await setSecret(account, 'value', deps), 'ok')
+    assert.equal(await getSecret(account, { allowEnv: false }, deps), 'value')
+    assert.equal(await hasSecret(account, deps), true)
+    assert.equal(await deleteSecret(account, deps), 'deleted')
+  }
+  const security = fake.calls.filter((c) => c.file === '/usr/bin/security')
+  assert.deepEqual(new Set(security.map((c) => c.args[0])), new Set(['-i', 'find-generic-password', 'delete-generic-password']))
+  const services = security.map((c) => (c.args[0] === '-i' ? / -s (\S+) /.exec(c.input ?? '')?.[1] : c.args[c.args.indexOf('-s') + 1]))
+  assert.deepEqual(new Set(services), new Set(['nortia-ai-digital-employee']))
 })
 
 test('Windows is not supported yet', async () => {

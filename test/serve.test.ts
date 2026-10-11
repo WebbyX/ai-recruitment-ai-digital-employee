@@ -127,5 +127,5 @@ test('an unknown command prints usage to stderr and exits 2', async () => {
   const res = await spawnKit('src', ['nope'], {})
   assert.equal(res.code, 2)
   assert.equal(res.stdout, '')
-  assert.match(res.stderr, /^usage: nortia-ai-grab/)
+  assert.match(res.stderr, /^usage: nortia-ai-digital-employee/)
 })

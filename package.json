@@ -1,11 +1,11 @@
 {
-  "name": "nortia-ai-grab",
-  "version": "0.1.0",
+  "name": "nortia-ai-digital-employee",
+  "version": "0.2.0",
   "description": "Local MCP connector that lets your own Claude send resumes from your hiring-platform account into your Nortia workspace.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "bin": {
-    "nortia-ai-grab": "dist/cli.js"
+    "nortia-ai-digital-employee": "dist/cli.js"
   },
   "files": [
     "dist"

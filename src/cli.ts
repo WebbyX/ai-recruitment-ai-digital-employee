@@ -27,7 +27,7 @@ export interface CliDeps extends SecretDeps {
 export const defaultAdapter = (): Adapter => new HiredlyAdapter()
 export { throttle as defaultThrottle }
 
-const USAGE = `usage: nortia-ai-grab <command>
+const USAGE = `usage: nortia-ai-digital-employee <command>
   serve                                   run the MCP server over stdio
   check                                   check the Nortia and Hiredly connection
   set-secret <account> [--stdin] [--for <email>]

@@ -11,7 +11,7 @@ export type Status =
 
 export type HiredlyCheck = 'ok' | 'login_rejected' | 'blocked' | 'not_configured' | 'error'
 
-const CONNECT = 'Nortia → AI Grab Resume → Connect'
+const CONNECT = 'Nortia → AI Digital Employee → Connect'
 
 export const KIT_OUTDATED_MESSAGE = `This Nortia connector is out of date. Open ${CONNECT} and copy the update instructions into Claude.`
 const UPDATE_AVAILABLE = `A newer Nortia connector is available — see ${CONNECT}.`
@@ -39,7 +39,7 @@ export function statusMessage(status: Status, tally: Tally, code?: string): stri
     const failed = tally.failed > 0 ? ` ${tally.failed} could not be sent and will be tried again on the next run.` : ''
     if (tally.submitted === 0) return 'No new resumes on Hiredly since the last run.'
     const waiting = tally.submitted - tally.matched
-    return `Sent ${tally.submitted} new resumes to Nortia. ${tally.matched} matched a job; ${waiting} are waiting in Nortia → AI Grab Resume → Resume inbox for you to assign.${failed}`
+    return `Sent ${tally.submitted} new resumes to Nortia. ${tally.matched} matched a job; ${waiting} are waiting in Nortia → AI Digital Employee → Resume for you to assign.${failed}`
   }
   return FIXED[status]
 }
@@ -79,7 +79,7 @@ export function withUpdateHint(message: string, updateAvailable: boolean): strin
   return updateAvailable ? `${message} ${UPDATE_AVAILABLE}` : message
 }
 
-const KEYS = 'Nortia → AI Grab Resume → Keys'
+const KEYS = 'Nortia → AI Digital Employee → Keys'
 const STILL_TO_DO = 'add a still-to-do line'
 const keyName = (prefix: string | null) => (prefix ? `the key ${prefix}…` : "this Mac's key")
 
@@ -116,7 +116,7 @@ export const DISCONNECT_ISSUES = {
   no_address: (prefix: string | null) =>
     `This Mac's connector has no Nortia address, so ${keyName(prefix)} was not revoked. Ask a Nortia admin to revoke it in ${KEYS}.`,
   no_key: `No Nortia key was saved on this Mac, so Nortia was not told. If this Mac's key is still active in ${KEYS}, revoke it there.`,
-  keychain: (what: 'Nortia key' | 'Hiredly password') => `Remove the saved ${what}: open Keychain Access, search for nortia-ai-grab and delete it.`,
+  keychain: (what: 'Nortia key' | 'Hiredly password') => `Remove the saved ${what}: open Keychain Access, search for nortia-ai-digital-employee and delete it.`,
   folder: (path: string) => `Delete the folder ${path}.`,
   rules: (file: string) => `Remove the Nortia rules from ${file}.`
 }

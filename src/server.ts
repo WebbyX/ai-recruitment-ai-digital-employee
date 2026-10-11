@@ -13,7 +13,7 @@ export const TOOL_DESCRIPTIONS = {
   check_connection:
     'Check that this computer can reach the Nortia workspace and sign in to Hiredly. Returns a status and a message to tell the user.',
   submit_resume:
-    'Send one resume file from the Nortia work folder to the Nortia resume inbox. external_job_title is required: the job title exactly as the hiring platform shows it.',
+    'Send one resume file from the Nortia work folder to Nortia (AI Digital Employee → Resume). external_job_title is required: the job title exactly as the hiring platform shows it.',
   hiredly_sync:
     'Fetch new resumes from Hiredly and send them to Nortia, one batch per call. Call repeatedly until the result has done: true, then tell the user its message. Do not run any other command.',
   disconnect:

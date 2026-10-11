@@ -1,11 +1,11 @@
-# Nortia AI Grab Connector
+# Nortia AI Digital Employee Connector
 
 A small local connector that lets **your own Claude** collect new applicants'
 resumes from **your own** hiring-platform account and send them into **your**
 Nortia workspace. It runs on your computer as a local MCP server for Claude
 Desktop; nothing is installed on Nortia's side.
 
-Resumes arrive in Nortia → AI Grab Resume → Resume inbox. A resume whose job
+Resumes arrive in Nortia → AI Digital Employee → Resume. A resume whose job
 title exactly matches one of your active jobs is assigned automatically; the
 rest wait there for you to assign or close.
 
@@ -14,11 +14,11 @@ rest wait there for you to assign or close.
 - Node.js 20 or newer
 - A paid Claude plan and Claude Desktop (the **Code** tab)
 - macOS (Windows coming)
-- A Nortia workspace with AI Grab Resume turned on
+- A Nortia workspace with AI Digital Employee turned on
 
 ## Install
 
-Open **Nortia → AI Grab Resume → Connect**. That page generates install
+Open **Nortia → AI Digital Employee → Connect**. That page generates install
 instructions for your workspace; paste them into a new session in Claude
 Desktop's Code tab and Claude sets everything up, including a daily scheduled
 run. This repository deliberately carries no install steps of its own.
@@ -36,7 +36,7 @@ To stop: tell Claude "Disconnect Nortia from this Mac".
   status sentence — never candidate names, emails or phone numbers.
 - Your Nortia connector key passes through Claude once, when you paste the
   install instructions. It can only send resumes to your own workspace, and an
-  admin can revoke it at any time in Nortia → AI Grab Resume → Keys.
+  admin can revoke it at any time in Nortia → AI Digital Employee → Keys.
 
 ## Roadmap
 
