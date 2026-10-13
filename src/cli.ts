@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import type { Readable, Writable } from 'node:stream'
 import { parseArgs } from 'node:util'
 import { loadConfig } from './config'
+import { collectDevice } from './device/collect'
+import type { DeviceInfo } from './device/types'
 import { cliHiredlyMessage, withUpdateHint } from './messages'
 import { HiredlyAdapter } from './platforms/hiredly/hiredly'
 import { throttle } from './platforms/hiredly/throttle'
@@ -22,6 +24,7 @@ export interface CliDeps extends SecretDeps {
   newAdapter: () => Adapter
   throttle: () => Promise<void>
   now: () => Date
+  username?: () => string
 }
 
 export const defaultAdapter = (): Adapter => new HiredlyAdapter()
@@ -53,13 +56,16 @@ async function dispatch(argv: string[], io: Io, deps: CliDeps): Promise<number> 
   const print = (value: unknown) => io.stdout.write(JSON.stringify(value) + '\n')
   const log = (line: string) => io.stderr.write(`[nortia] ${line}\n`)
   const config = loadConfig(deps.env)
+  let device: Promise<DeviceInfo> | undefined
+  const deviceOnce = () => (device ??= collectDevice({ runner: deps.runner, platform: deps.platform, username: deps.username }))
   const syncDeps = (allowEnv: boolean): SyncDeps => ({
     config,
     getSecret: (account: Account) => getSecret(account, { allowEnv }, deps),
     newAdapter: deps.newAdapter,
     throttle: deps.throttle,
     now: deps.now,
-    log
+    log,
+    device: deviceOnce
   })
 
   switch (command) {

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { NortiaClient, type RunReport } from './api/client'
 import type { Config } from './config'
+import type { DeviceInfo } from './device/types'
 import {
   batchMessage,
   dryRunMessage,
@@ -34,6 +35,7 @@ export interface SyncDeps {
   throttle: () => Promise<void>
   now: () => Date
   log: (line: string) => void
+  device?: () => Promise<DeviceInfo>
 }
 
 export interface SyncResponse extends Counts {
@@ -196,7 +198,7 @@ export class HiredlyRun {
         if (!config.apiUrl) return { status: 'not_configured' }
         const key = await this.deps.getSecret('nortia_api_key')
         if (!key) return { status: 'not_configured' }
-        session.client = new NortiaClient(config.apiUrl, key)
+        session.client = new NortiaClient(config.apiUrl, key, this.deps.device ? await this.deps.device() : {})
         const me = await session.client.me()
         if (!me.ok) return fromApiError(me.code, me.detail)
         session.updateAvailable = isOlder(KIT_VERSION, me.data.kit?.latest_version ?? KIT_VERSION)

@@ -82,3 +82,57 @@ test('an unreachable API is an error, not a crash', async () => {
   const res = await new NortiaClient('http://127.0.0.1:9', VALID_KEY).me()
   assert.ok(!res.ok && res.code === 'error' && res.detail.startsWith('network_'))
 })
+
+const deviceHeaders = (r: { headers: Record<string, unknown> }) => Object.keys(r.headers).filter((h) => h.startsWith('x-nortia-device-'))
+
+test('every request carries this computer, percent-encoded so any character survives', async () => {
+  const device = { name: 'Aisyah’s MacBook Air', user: '陈 a+b&c%d', serial: 'C02TEST0001' }
+  const client = new NortiaClient(api.url, VALID_KEY, device)
+  const from = api.requests.length
+  const results = [
+    await client.me(),
+    await client.lookup('hiredly', ['dev-1']),
+    await client.submitResume(
+      { bytes: Buffer.from('%PDF-1'), name: 'r.pdf' },
+      { platform: 'hiredly', external_application_id: 'dev-1', external_job_title: 'Chef' }
+    ),
+    await client.reportRun({
+      run_id: crypto.randomUUID(),
+      done: true,
+      outcome: 'ok',
+      counts: { submitted: 1, duplicates: 0, matched: 0, no_title_match: 1, ambiguous_title: 0, failed: 0 }
+    })
+  ]
+  assert.ok(results.every((r) => r.ok))
+  const sent = api.requests.slice(from)
+  assert.equal(sent.length, 4)
+  for (const r of sent) {
+    assert.equal(r.headers['x-nortia-device-name'], encodeURIComponent(device.name))
+    assert.equal(decodeURIComponent(String(r.headers['x-nortia-device-name'])), device.name)
+    assert.equal(decodeURIComponent(String(r.headers['x-nortia-device-user'])), device.user)
+    assert.equal(decodeURIComponent(String(r.headers['x-nortia-device-serial'])), device.serial)
+  }
+})
+
+test('an unknown computer sends no device headers', async () => {
+  const from = api.requests.length
+  assert.ok((await new NortiaClient(api.url, VALID_KEY, {}).me()).ok)
+  assert.deepEqual(deviceHeaders(api.requests[from]), [])
+})
+
+test('a value encodeURIComponent cannot encode is left out, and the request still goes', async () => {
+  const from = api.requests.length
+  assert.ok((await new NortiaClient(api.url, VALID_KEY, { name: '\uD800', serial: 'C02TEST0001' }).me()).ok)
+  assert.deepEqual(deviceHeaders(api.requests[from]), ['x-nortia-device-serial'])
+})
+
+test('disconnect sends no device headers', async () => {
+  const from = api.requests.length
+  assert.ok((await new NortiaClient(api.url, VALID_KEY).disconnect()).ok)
+  assert.equal(api.requests[from].path, '/api/v1/disconnect')
+  assert.deepEqual(deviceHeaders(api.requests[from]), [])
+})
+
+test('fetch itself refuses a raw ’ in a header, which is why device values are encoded', async () => {
+  await assert.rejects(fetch(api.url + '/api/v1/me', { headers: { 'x-a': '’' } }))
+})

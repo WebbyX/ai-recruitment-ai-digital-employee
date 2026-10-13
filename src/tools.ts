@@ -2,6 +2,7 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import { extname, resolve, sep } from 'node:path'
 import { NortiaClient } from './api/client'
 import type { Config } from './config'
+import type { DeviceInfo } from './device/types'
 import { checkMessage, statusMessage, submitMessage, withUpdateHint, type HiredlyCheck, type Status } from './messages'
 import { classifyHiredlyError, fromApiError, MAX_RESUME_BYTES } from './platforms/hiredly/sync'
 import type { Adapter } from './platforms/hiredly/types'
@@ -13,6 +14,7 @@ export interface ToolDeps {
   getSecret: (account: Account) => Promise<string | null>
   newAdapter: () => Adapter
   log: (line: string) => void
+  device?: () => Promise<DeviceInfo>
 }
 
 const NO_TALLY = { submitted: 0, matched: 0, failed: 0 }
@@ -35,7 +37,7 @@ async function clientFor(deps: ToolDeps): Promise<NortiaClient | { status: Statu
   const key = await readSecret(deps, 'nortia_api_key')
   if (key === 'not_supported_yet') return { status: 'error', code: 'not_supported_yet' }
   if (!key) return { status: 'not_configured' }
-  return new NortiaClient(deps.config.apiUrl, key)
+  return new NortiaClient(deps.config.apiUrl, key, deps.device ? await deps.device() : {})
 }
 
 export async function checkConnection(deps: ToolDeps) {

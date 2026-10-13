@@ -17,11 +17,12 @@ export interface RunResult {
   stdout: string
   stderr: string
 }
-export type Runner = (file: string, args: string[], input?: string) => Promise<RunResult>
+export type Runner = (file: string, args: string[], input?: string, opts?: { timeoutMs?: number }) => Promise<RunResult>
 
-export const execRunner: Runner = (file, args, input) =>
+export const execRunner: Runner = (file, args, input, opts) =>
   new Promise((resolve) => {
-    const child = execFile(file, args, { encoding: 'utf8' }, (err, stdout, stderr) => {
+    const limit = opts?.timeoutMs ? { timeout: opts.timeoutMs, killSignal: 'SIGKILL' as const } : {}
+    const child = execFile(file, args, { encoding: 'utf8', ...limit }, (err, stdout, stderr) => {
       const code = err ? (typeof err.code === 'number' ? err.code : 1) : 0
       resolve({ code, stdout: String(stdout ?? ''), stderr: String(stderr ?? '') })
     })
