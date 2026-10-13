@@ -1,4 +1,6 @@
 import { execFile } from 'node:child_process'
+import * as winCred from './windows/credentials'
+import * as winDialog from './windows/dialogs'
 
 export const SERVICE = 'nortia-ai-digital-employee'
 export const ACCOUNTS = ['nortia_api_key', 'hiredly_password'] as const
@@ -17,15 +19,17 @@ export interface RunResult {
   stdout: string
   stderr: string
 }
-export type Runner = (file: string, args: string[], input?: string, opts?: { timeoutMs?: number }) => Promise<RunResult>
+export type Runner = (file: string, args: string[], input?: string, opts?: { timeoutMs?: number; hideWindow?: boolean }) => Promise<RunResult>
 
 export const execRunner: Runner = (file, args, input, opts) =>
   new Promise((resolve) => {
     const limit = opts?.timeoutMs ? { timeout: opts.timeoutMs, killSignal: 'SIGKILL' as const } : {}
-    const child = execFile(file, args, { encoding: 'utf8', ...limit }, (err, stdout, stderr) => {
+    const hide = opts?.hideWindow ? { windowsHide: true } : {}
+    const child = execFile(file, args, { encoding: 'utf8', ...limit, ...hide }, (err, stdout, stderr) => {
       const code = err ? (typeof err.code === 'number' ? err.code : 1) : 0
       resolve({ code, stdout: String(stdout ?? ''), stderr: String(stderr ?? '') })
     })
+    child.stdin?.on('error', () => {})
     child.stdin?.end(input ?? '')
   })
 
@@ -35,6 +39,8 @@ export interface SecretDeps {
   env: NodeJS.ProcessEnv
   /** A keychain file to use instead of the default keychain; only the opt-in keychain test sets it. */
   keychain?: string
+  /** A Credential Manager target prefix to use instead of SERVICE; only the opt-in Windows test sets it. */
+  targetPrefix?: string
 }
 
 export function isAccount(value: string | undefined): value is Account {
@@ -42,7 +48,7 @@ export function isAccount(value: string | undefined): value is Account {
 }
 
 function assertSupported(platform: NodeJS.Platform): void {
-  if (platform !== 'darwin') throw new Error('not_supported_yet')
+  if (platform !== 'darwin' && platform !== 'win32') throw new Error('not_supported_yet')
 }
 
 export async function getSecret(account: Account, opts: { allowEnv: boolean }, deps: SecretDeps): Promise<string | null> {
@@ -51,6 +57,7 @@ export async function getSecret(account: Account, opts: { allowEnv: boolean }, d
     if (fromEnv) return fromEnv
   }
   assertSupported(deps.platform)
+  if (deps.platform === 'win32') return winCred.getSecret(account, deps)
   const args = ['find-generic-password', '-s', SERVICE, '-a', account, '-g']
   const res = await deps.runner(SECURITY, deps.keychain ? [...args, deps.keychain] : args)
   if (res.code !== 0) return null
@@ -77,6 +84,7 @@ const quote = (s: string) => '"' + s.replace(/[\\"]/g, (c) => '\\' + c) + '"'
 export async function setSecret(account: Account, value: string, deps: SecretDeps): Promise<SetResult> {
   assertSupported(deps.platform)
   if (CONTROL.test(value) || Buffer.byteLength(value, 'utf8') > MAX_VALUE_BYTES) return 'invalid_value'
+  if (deps.platform === 'win32') return winCred.setSecret(account, value, deps)
   if (deps.keychain !== undefined && CONTROL.test(deps.keychain)) return 'invalid_value'
   const command = `add-generic-password -U -s ${SERVICE} -a ${account} -w ${quote(value)}${deps.keychain ? ' ' + quote(deps.keychain) : ''}\n`
   if (Buffer.byteLength(command, 'utf8') > MAX_COMMAND_BYTES) return 'invalid_value'
@@ -92,6 +100,7 @@ const DELETE_ATTEMPTS = 5
 /** Deletes every copy of the item (the keychain can hold duplicates): repeats until the tool answers not found, at most five times, and counts as done only when a final lookup also answers not found (exit 44). */
 export async function deleteSecret(account: Account, deps: SecretDeps): Promise<DeleteResult> {
   assertSupported(deps.platform)
+  if (deps.platform === 'win32') return winCred.deleteSecret(account, deps)
   let deleted = false
   for (let i = 0; i < DELETE_ATTEMPTS; i++) {
     const res = await deps.runner(SECURITY, itemArgs('delete-generic-password', account, deps))
@@ -104,6 +113,7 @@ export async function deleteSecret(account: Account, deps: SecretDeps): Promise<
 
 export async function hasSecret(account: Account, deps: SecretDeps): Promise<boolean> {
   assertSupported(deps.platform)
+  if (deps.platform === 'win32') return winCred.hasSecret(account, deps)
   return (await lookup(account, deps)) === 0
 }
 
@@ -128,6 +138,7 @@ export type ConfirmResult = 'confirmed' | 'cancelled' | 'error'
 
 export async function confirmDialog(message: string, deps: SecretDeps): Promise<ConfirmResult> {
   assertSupported(deps.platform)
+  if (deps.platform === 'win32') return winDialog.confirmDialog(message, deps)
   const res = await deps.runner(OSASCRIPT, [...CONFIRM.flatMap((line) => ['-e', line]), message])
   if (res.code === 0) {
     const answer = res.stdout.trim()
@@ -151,6 +162,7 @@ export type PromptResult = { value: string } | { cancelled: true } | { error: tr
 
 export async function promptSecret(label: string, deps: SecretDeps): Promise<PromptResult> {
   assertSupported(deps.platform)
+  if (deps.platform === 'win32') return winDialog.promptSecret(label, deps)
   const res = await deps.runner(OSASCRIPT, [...DIALOG.flatMap((line) => ['-e', line]), label])
   if (res.code === 0) return { value: res.stdout.replace(/\r?\n$/, '') }
   if (res.stderr.includes('-128')) return { cancelled: true }

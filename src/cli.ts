@@ -25,6 +25,7 @@ export interface CliDeps extends SecretDeps {
   throttle: () => Promise<void>
   now: () => Date
   username?: () => string
+  hostname?: () => string
 }
 
 export const defaultAdapter = (): Adapter => new HiredlyAdapter()
@@ -34,7 +35,7 @@ const USAGE = `usage: nortia-ai-digital-employee <command>
   serve                                   run the MCP server over stdio
   check                                   check the Nortia and Hiredly connection
   set-secret <account> [--stdin] [--for <email>]
-                                          save nortia_api_key or hiredly_password to the keychain
+                                          save nortia_api_key or hiredly_password to the system credential store
   hiredly-sync [--max-new N] [--dry-run]  send new Hiredly resumes to Nortia
   submit <file> --application-id <id> --title <job title> [--platform hiredly]
          [--job-id <id>] [--name <n>] [--email <e>] [--phone <p>] [--applied-at <date>]`
@@ -57,7 +58,7 @@ async function dispatch(argv: string[], io: Io, deps: CliDeps): Promise<number> 
   const log = (line: string) => io.stderr.write(`[nortia] ${line}\n`)
   const config = loadConfig(deps.env)
   let device: Promise<DeviceInfo> | undefined
-  const deviceOnce = () => (device ??= collectDevice({ runner: deps.runner, platform: deps.platform, username: deps.username }))
+  const deviceOnce = () => (device ??= collectDevice({ runner: deps.runner, platform: deps.platform, username: deps.username, hostname: deps.hostname, env: deps.env }))
   const syncDeps = (allowEnv: boolean): SyncDeps => ({
     config,
     getSecret: (account: Account) => getSecret(account, { allowEnv }, deps),
@@ -172,7 +173,7 @@ async function setSecretCommand(args: string[], io: Io, deps: CliDeps, print: (v
     print({ status: 'error', code: 'invalid_email' })
     return 2
   }
-  if (deps.platform !== 'darwin') {
+  if (deps.platform !== 'darwin' && deps.platform !== 'win32') {
     print({ status: 'error', code: 'not_supported_yet' })
     return 1
   }
@@ -181,7 +182,7 @@ async function setSecretCommand(args: string[], io: Io, deps: CliDeps, print: (v
   if (args.includes('--stdin')) {
     value = (await readAll(io.stdin)).replace(/\r?\n$/, '')
   } else {
-    const answer = await promptSecret(dialogLabel(account, email), deps)
+    const answer = await promptSecret(dialogLabel(account, email, deps.platform), deps)
     if ('cancelled' in answer) {
       print({ status: 'cancelled' })
       return 1
@@ -214,8 +215,9 @@ async function setSecretCommand(args: string[], io: Io, deps: CliDeps, print: (v
   return 0
 }
 
-export function dialogLabel(account: Account, email: string | undefined): string {
+export function dialogLabel(account: Account, email: string | undefined, platform: NodeJS.Platform): string {
   if (account === 'nortia_api_key') return 'Enter your Nortia connector key.'
+  if (email && platform === 'win32') return `Enter the Hiredly password for ${email}. It is saved to Windows Credential Manager on this computer and never shown to the AI.`
   return email
     ? `Enter the Hiredly password for ${email}. It is saved to your Mac keychain and never shown to the AI.`
     : 'Enter your Hiredly password.'

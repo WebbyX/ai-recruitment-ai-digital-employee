@@ -10,6 +10,8 @@ export interface DeviceDeps {
   runner: Runner
   platform: NodeJS.Platform
   username?: () => string
+  hostname?: () => string
+  env?: NodeJS.ProcessEnv
 }
 
 export type DeviceReader = (deps: DeviceDeps) => Promise<DeviceInfo>

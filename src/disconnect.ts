@@ -33,9 +33,9 @@ const prefixOf = (key: string | null) => (key && KEY_FORMAT.test(key) ? key.slic
 
 const notSupported = () => ({ status: 'not_supported_yet' as const, done: true, message: DISCONNECT_MESSAGES.not_supported_yet })
 
-/** Lists what a disconnect would remove from this Mac. Reads only: no API call, no file or keychain change. */
+/** Lists what a disconnect would remove from this computer. Reads only: no API call, no file or keychain change. */
 export async function inspectDisconnect(deps: DisconnectDeps) {
-  if (deps.platform !== 'darwin') return notSupported()
+  if (deps.platform !== 'darwin' && deps.platform !== 'win32') return notSupported()
   const willRemove: string[] = []
 
   const key = await getSecret('nortia_api_key', { allowEnv: false }, deps)
@@ -57,12 +57,12 @@ export async function inspectDisconnect(deps: DisconnectDeps) {
 }
 
 /**
- * Disconnects this Mac after the user clicks Disconnect in a native dialog the model cannot answer: revokes the key on
+ * Disconnects this computer after the user clicks Disconnect in a native dialog the model cannot answer: revokes the key on
  * Nortia (reading it before the keychain is cleared), deletes both keychain items, ~/.nortia, the schedule's SKILL.md
  * folder and the Nortia allow rules. Each step runs even if an earlier one failed; what failed comes back as issues.
  */
 export async function runDisconnect(deps: DisconnectDeps) {
-  if (deps.platform !== 'darwin') return notSupported()
+  if (deps.platform !== 'darwin' && deps.platform !== 'win32') return notSupported()
   const answer = await confirmDialog(DISCONNECT_CONFIRM_TEXT, deps)
   if (answer !== 'confirmed') {
     const status = answer === 'cancelled' ? 'cancelled' : 'confirm_unavailable'
@@ -85,7 +85,7 @@ export async function runDisconnect(deps: DisconnectDeps) {
   ] as const) {
     const result = await deleteSecret(account, deps)
     if (result === 'deleted') removed.push(`keychain:${account}`)
-    if (result === 'failed') issues.push(DISCONNECT_ISSUES.keychain(what))
+    if (result === 'failed') issues.push(DISCONNECT_ISSUES.keychain(what, deps.platform))
   }
 
   const folder = join(deps.home, '.nortia')
@@ -93,7 +93,10 @@ export async function runDisconnect(deps: DisconnectDeps) {
   for (const path of [folder, ...((await isOurTask(taskDir)) ? [taskDir] : [])]) {
     const result = await removeEntry(path)
     if (result === 'removed') removed.push(tilde(deps, path))
-    if (result === 'failed') issues.push(DISCONNECT_ISSUES.folder(tilde(deps, path)))
+    if (result === 'failed') {
+      const inUse = deps.platform === 'win32' && path === folder
+      issues.push(inUse ? DISCONNECT_ISSUES.folderInUse(tilde(deps, path)) : DISCONNECT_ISSUES.folder(tilde(deps, path)))
+    }
   }
 
   const removedRules: string[] = []

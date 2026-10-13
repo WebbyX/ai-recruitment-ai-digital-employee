@@ -21,7 +21,7 @@ const FIXED: Record<Exclude<Status, 'ok' | 'partial' | 'error'>, string> = {
   blocked: 'Hiredly blocked the sign-in for now (too many attempts or a captcha). Nothing to do — the next run will try again.',
   not_configured: `The Nortia connector is not fully set up. Open ${CONNECT} and generate new install instructions.`,
   kit_outdated: KIT_OUTDATED_MESSAGE,
-  api_key_invalid: `Nortia no longer accepts this connector's key (it may have been revoked). Open ${CONNECT} and generate new install instructions. To remove Nortia from this computer instead, tell Claude: "Disconnect Nortia from this Mac".`,
+  api_key_invalid: `Nortia no longer accepts this connector's key (it may have been revoked). Open ${CONNECT} and generate new install instructions. To remove Nortia from this computer instead, tell Claude: "Disconnect Nortia from this computer".`,
   rate_limited: 'Nortia asked the connector to slow down. The next run will continue.'
 }
 
@@ -81,22 +81,22 @@ export function withUpdateHint(message: string, updateAvailable: boolean): strin
 
 const KEYS = 'Nortia → AI Digital Employee → Keys'
 const STILL_TO_DO = 'add a still-to-do line'
-const keyName = (prefix: string | null) => (prefix ? `the key ${prefix}…` : "this Mac's key")
+const keyName = (prefix: string | null) => (prefix ? `the key ${prefix}…` : "this computer's key")
 
 export const DISCONNECT_CONFIRM_TEXT =
-  "Disconnect Nortia from this Mac? This removes the Nortia connector, its saved key and Hiredly password, and the daily resume run. Nortia stops accepting this Mac's key."
+  "Disconnect Nortia from this computer? This removes the Nortia connector, its saved key and Hiredly password, and the daily resume run. Nortia stops accepting this computer's key."
 
 export const DISCONNECT_PREVIEW_MESSAGE = [
-  'Nothing has been changed yet. Show me the will_remove list as a short list of what disconnecting removes from this Mac.',
-  'Then ask me "Disconnect Nortia from this Mac?" using your multiple-choice question tool (AskUserQuestion) with the options "Yes, disconnect this Mac", "Pause the daily run instead" and "No, keep it"; ask in plain text if that tool isn\'t available.',
-  'If I choose "Yes, disconnect this Mac": tell me "A Mac confirmation box will appear — click Disconnect there to finish, or Cancel to keep Nortia." and call disconnect with confirm: true.',
+  'Nothing has been changed yet. Show me the will_remove list as a short list of what disconnecting removes from this computer.',
+  'Then ask me "Disconnect Nortia from this computer?" using your multiple-choice question tool (AskUserQuestion) with the options "Yes, disconnect this computer", "Pause the daily run instead" and "No, keep it"; ask in plain text if that tool isn\'t available.',
+  'If I choose "Yes, disconnect this computer": tell me "A confirmation box will appear on your screen — click Disconnect there to finish, or Cancel to keep Nortia." and call disconnect with confirm: true.',
   'If I choose "Pause the daily run instead": call update_scheduled_task with taskId nortia-hiredly and enabled false, then tell me: "The daily Nortia run is paused. To start it again, tell Claude: Resume Nortia."',
   'Anything else: tell me "Nothing was changed." and stop.'
 ].join(' ')
 
 export const WILL_REMOVE = {
-  key: (prefix: string | null) => `The Nortia key saved on this Mac${prefix ? ` (${prefix}…)` : ''}; Nortia stops accepting it`,
-  hiredlyPassword: 'The Hiredly password saved on this Mac',
+  key: (prefix: string | null) => `The Nortia key saved on this computer${prefix ? ` (${prefix}…)` : ''}; Nortia stops accepting it`,
+  hiredlyPassword: 'The Hiredly password saved on this computer',
   folder: (path: string) => `The folder ${path}`,
   rules: (count: number, file: string) => `${count} Nortia permission ${count === 1 ? 'rule' : 'rules'} in ${file}`,
   task: 'The daily task nortia-hiredly in Claude Desktop',
@@ -105,19 +105,23 @@ export const WILL_REMOVE = {
 
 export const DISCONNECT_MESSAGES = {
   cancelled: 'Tell me: "Nothing was changed — the disconnect was cancelled." Do not call disconnect again unless I ask.',
-  confirm_unavailable: `Tell me: "The confirmation box could not be shown on this Mac, so nothing was changed. To remove Nortia anyway, open ${CONNECT} → Troubleshooting, click Copy Disconnect Instructions and paste them into Claude." Do not call disconnect again.`,
-  not_supported_yet: 'Tell me: "Disconnecting this way works only on macOS for now. Nothing was changed."',
-  disconnected: 'Nortia is removed from this Mac. Now do every entry of next_steps, in order.'
+  confirm_unavailable: `Tell me: "The confirmation box could not be shown on this computer, so nothing was changed. To remove Nortia anyway, open ${CONNECT} → Troubleshooting, click Copy Disconnect Instructions and paste them into Claude." Do not call disconnect again.`,
+  not_supported_yet: 'Tell me: "Disconnecting this way works only on macOS and Windows for now. Nothing was changed."',
+  disconnected: 'Nortia is removed from this computer. Now do every entry of next_steps, in order.'
 }
 
 export const DISCONNECT_ISSUES = {
   unreachable: (prefix: string | null) =>
     `Nortia could not be reached, so ${keyName(prefix)} still works. Ask a Nortia admin to revoke it in ${KEYS}.`,
   no_address: (prefix: string | null) =>
-    `This Mac's connector has no Nortia address, so ${keyName(prefix)} was not revoked. Ask a Nortia admin to revoke it in ${KEYS}.`,
-  no_key: `No Nortia key was saved on this Mac, so Nortia was not told. If this Mac's key is still active in ${KEYS}, revoke it there.`,
-  keychain: (what: 'Nortia key' | 'Hiredly password') => `Remove the saved ${what}: open Keychain Access, search for nortia-ai-digital-employee and delete it.`,
+    `This computer's connector has no Nortia address, so ${keyName(prefix)} was not revoked. Ask a Nortia admin to revoke it in ${KEYS}.`,
+  no_key: `No Nortia key was saved on this computer, so Nortia was not told. If this computer's key is still active in ${KEYS}, revoke it there.`,
+  keychain: (what: 'Nortia key' | 'Hiredly password', platform: NodeJS.Platform) =>
+    platform === 'win32'
+      ? `Remove the saved ${what}: open Credential Manager → Windows Credentials, find nortia-ai-digital-employee:${what === 'Nortia key' ? 'nortia_api_key' : 'hiredly_password'} and remove it.`
+      : `Remove the saved ${what}: open Keychain Access, search for nortia-ai-digital-employee and delete it.`,
   folder: (path: string) => `Delete the folder ${path}.`,
+  folderInUse: (path: string) => `Delete the folder ${path} after quitting Claude Desktop (Windows keeps the Node.js inside it in use until then).`,
   rules: (file: string) => `Remove the Nortia rules from ${file}.`
 }
 
@@ -129,6 +133,6 @@ export function disconnectNextSteps(settingsToEdit: string[]): string[] {
       (file) =>
         `Edit ${file}: remove from permissions.allow every rule that is exactly mcp__nortia or starts with mcp__nortia__, keeping everything else. If you can't, ${STILL_TO_DO}: "${DISCONNECT_ISSUES.rules(file)}"`
     ),
-    'Then tell me "Nortia disconnected from this Mac." If the issues list has entries or you added still-to-do lines, follow it with "Still to do:" and each of them on its own line. End with "You can now delete the Nortia setup conversations in Claude." Do not call disconnect again.'
+    'Then tell me "Nortia disconnected from this computer." If the issues list has entries or you added still-to-do lines, follow it with "Still to do:" and each of them on its own line. End with "You can now delete the Nortia setup conversations in Claude." Do not call disconnect again.'
   ]
 }

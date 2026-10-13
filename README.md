@@ -13,7 +13,7 @@ rest wait there for you to assign or close.
 
 - Node.js 20 or newer
 - A paid Claude plan and Claude Desktop (the **Code** tab)
-- macOS (Windows coming)
+- macOS, or Windows 10 or 11
 - A Nortia workspace with AI Digital Employee turned on
 
 ## Install
@@ -23,22 +23,23 @@ instructions for your workspace; paste them into a new session in Claude
 Desktop's Code tab and Claude sets everything up, including a daily scheduled
 run. This repository deliberately carries no install steps of its own.
 
-To stop: tell Claude "Disconnect Nortia from this Mac".
+To stop: tell Claude "Disconnect Nortia from this computer".
 
 ## Privacy
 
 - Resume files and your Hiredly password never pass through the AI. Resumes are
   downloaded and sent to Nortia inside the connector process, in memory only,
   and are never written to disk.
-- Your Hiredly password is typed into a macOS password dialog and stored in your
-  Mac keychain; Claude only sees whether it was saved.
+- Your Hiredly password is typed into a password box on your screen and stored
+  in your Mac keychain or Windows Credential Manager; Claude only sees whether
+  it was saved.
 - Claude only sees counts (how many resumes were sent, matched or skipped) and a
   status sentence — never candidate names, emails or phone numbers.
 - Your Nortia connector key passes through Claude once, when you paste the
   install instructions. It can only send resumes to your own workspace, and an
   admin can revoke it at any time in Nortia → AI Digital Employee → Keys.
 - So your admin can tell which computer a key is on, the connector sends this
-  Mac's name, your macOS user name and its serial number with each request;
+  computer's name, your user name on it and its serial number with each request;
   Nortia keeps them with the key and records the internet address each resume
   came from.
 
@@ -46,7 +47,7 @@ To stop: tell Claude "Disconnect Nortia from this Mac".
 
 - Hiredly — available
 - JobStreet — browser-driven, planned
-- Windows — planned
+- Windows — available
 
 ## License
 
