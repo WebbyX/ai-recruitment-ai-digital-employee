@@ -37,6 +37,10 @@ To stop: tell Claude "Disconnect Nortia from this Mac".
 - Your Nortia connector key passes through Claude once, when you paste the
   install instructions. It can only send resumes to your own workspace, and an
   admin can revoke it at any time in Nortia → AI Digital Employee → Keys.
+- So your admin can tell which computer a key is on, the connector sends this
+  Mac's name, your macOS user name and its serial number with each request;
+  Nortia keeps them with the key and records the internet address each resume
+  came from.
 
 ## Roadmap
 

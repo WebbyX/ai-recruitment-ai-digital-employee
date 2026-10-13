@@ -1,3 +1,4 @@
+import type { DeviceInfo } from '../device/types'
 import { KIT_NAME, KIT_VERSION } from '../version'
 
 export type ApiErrorCode = 'api_key_invalid' | 'platform_unavailable' | 'kit_outdated' | 'rate_limited' | 'error'
@@ -48,12 +49,17 @@ export interface RunReport {
 
 const TIMEOUT_MS = 30_000
 const UPLOAD_TIMEOUT_MS = 120_000
+const DEVICE_HEADERS = [
+  ['name', 'x-nortia-device-name'],
+  ['user', 'x-nortia-device-user'],
+  ['serial', 'x-nortia-device-serial']
+] as const
 
-/** Thin client for the Nortia `api/v1` key-authenticated routes; every call carries the key and the kit version. */
+/** Thin client for the Nortia `api/v1` key-authenticated routes; every call carries the key, the kit version and, when known, this computer. */
 export class NortiaClient {
   private readonly base: string
 
-  constructor(apiUrl: string, private readonly key: string) {
+  constructor(apiUrl: string, private readonly key: string, private readonly device: DeviceInfo = {}) {
     this.base = apiUrl.replace(/\/+$/, '') + '/api/v1/'
   }
 
@@ -107,6 +113,11 @@ export class NortiaClient {
       'user-agent': `${KIT_NAME}/${KIT_VERSION}`,
       'x-nortia-kit-version': KIT_VERSION
     }
+    for (const [field, header] of DEVICE_HEADERS) {
+      const value = this.device[field]
+      const encoded = value ? encodeHeader(value) : null
+      if (encoded !== null) headers[header] = encoded
+    }
     let payload: string | FormData | undefined
     if (body.json !== undefined) {
       headers['content-type'] = 'application/json'
@@ -151,6 +162,15 @@ export class NortiaClient {
     }
     if (envelope?.status !== true) return { ok: false, code: 'error', detail: 'bad_response' }
     return { ok: true, httpStatus: res.status, data: (envelope.data ?? {}) as T }
+  }
+}
+
+// why: fetch throws on any header character above U+00FF (the ’ in "Aisyah’s MacBook"), so values travel percent-encoded; a lone surrogate makes encodeURIComponent throw.
+function encodeHeader(value: string): string | null {
+  try {
+    return encodeURIComponent(value)
+  } catch {
+    return null
   }
 }
 

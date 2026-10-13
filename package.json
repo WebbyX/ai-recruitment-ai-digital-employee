@@ -1,6 +1,6 @@
 {
   "name": "nortia-ai-digital-employee",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local MCP connector that lets your own Claude send resumes from your hiring-platform account into your Nortia workspace.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
