@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { deleteSecret, getSecret, hasSecret, setSecret } from '../src/secrets'
+import { fakePowerShell } from './helpers/fake-powershell'
 import { fakeRunner, ROOT, runCli, spawnKit, VALID_KEY } from './helpers/harness'
 
 const OSASCRIPT = '/usr/bin/osascript'
@@ -18,6 +19,43 @@ test('--stdin saves a well-formed key and prints only the ok line', async () => 
   assert.deepEqual(fake.calls[0].args, ['-i'])
   assert.ok(fake.calls[0].input!.startsWith('add-generic-password -U -s nortia-ai-digital-employee -a nortia_api_key -w "'))
   assert.ok(fake.calls.every((c) => !c.args.join(' ').includes(VALID_KEY)), 'the value is never in argv')
+})
+
+test('--stdin drops one leading BOM, as Windows PowerShell 5.1 pipes it', async () => {
+  for (const stdin of ['\uFEFF' + VALID_KEY + '\r\n', '\uFEFF' + VALID_KEY]) {
+    const fake = fakeRunner()
+    const res = await runCli(['set-secret', 'nortia_api_key', '--stdin'], { deps: { runner: fake.runner }, stdin })
+    assert.equal(res.code, 0, JSON.stringify(stdin))
+    assert.equal(res.stdout, '{"status":"ok","account":"nortia_api_key"}\n')
+    assert.equal(fake.keychain.nortia_api_key, VALID_KEY)
+  }
+
+  const fake = fakeRunner()
+  const res = await runCli(['set-secret', 'hiredly_password', '--stdin'], { deps: { runner: fake.runner }, stdin: '\uFEFFS3cret-pw\r\n' })
+  assert.equal(res.code, 0)
+  assert.equal(fake.keychain.hiredly_password, 'S3cret-pw')
+})
+
+test('--stdin keeps a second BOM or a leading space, so the key is refused', async () => {
+  for (const stdin of ['\uFEFF\uFEFF' + VALID_KEY + '\r\n', ' ' + VALID_KEY + '\r\n']) {
+    const fake = fakeRunner()
+    const res = await runCli(['set-secret', 'nortia_api_key', '--stdin'], { deps: { runner: fake.runner }, stdin })
+    assert.equal(res.code, 2, JSON.stringify(stdin))
+    assert.deepEqual(JSON.parse(res.stdout), { status: 'error', code: 'invalid_key' })
+    assert.equal(fake.calls.length, 0)
+    assert.deepEqual(fake.keychain, {})
+  }
+})
+
+test('win32: a BOM-prefixed key piped to --stdin is saved without the BOM', async () => {
+  const fake = fakePowerShell()
+  const res = await runCli(['set-secret', 'nortia_api_key', '--stdin'], {
+    deps: { runner: fake.runner, platform: 'win32' },
+    stdin: '\uFEFF' + VALID_KEY + '\r\n'
+  })
+  assert.equal(res.code, 0)
+  assert.equal(res.stdout, '{"status":"ok","account":"nortia_api_key"}\n')
+  assert.equal(fake.creds.get('nortia-ai-digital-employee:nortia_api_key'), VALID_KEY)
 })
 
 test('awkward passwords survive the stdin quoting and read back unchanged', async () => {

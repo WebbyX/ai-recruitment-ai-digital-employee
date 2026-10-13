@@ -180,7 +180,8 @@ async function setSecretCommand(args: string[], io: Io, deps: CliDeps, print: (v
 
   let value: string
   if (args.includes('--stdin')) {
-    value = (await readAll(io.stdin)).replace(/\r?\n$/, '')
+    // why: Windows PowerShell 5.1 prepends a UTF-8 BOM to what it pipes into a native process.
+    value = (await readAll(io.stdin)).replace(/^\uFEFF/, '').replace(/\r?\n$/, '')
   } else {
     const answer = await promptSecret(dialogLabel(account, email, deps.platform), deps)
     if ('cancelled' in answer) {
