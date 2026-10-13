@@ -172,9 +172,9 @@ test('every keychain call names only the nortia-ai-digital-employee service', as
   assert.deepEqual(new Set(services), new Set(['nortia-ai-digital-employee']))
 })
 
-test('Windows is not supported yet', async () => {
+test('Linux is not supported yet', async () => {
   const fake = fakeRunner()
-  const res = await runCli(['set-secret', 'nortia_api_key', '--stdin'], { deps: { runner: fake.runner, platform: 'win32' }, stdin: VALID_KEY })
+  const res = await runCli(['set-secret', 'nortia_api_key', '--stdin'], { deps: { runner: fake.runner, platform: 'linux' }, stdin: VALID_KEY })
   assert.equal(res.code, 1)
   assert.deepEqual(JSON.parse(res.stdout), { status: 'error', code: 'not_supported_yet' })
   assert.equal(fake.calls.length, 0)

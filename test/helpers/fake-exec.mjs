@@ -18,6 +18,7 @@ cp.execFile = function fakeExecFile(file, args, opts, cb) {
   const fail = (code, stderr) => cb(Object.assign(new Error(stderr), { code }), '', stderr)
   return {
     stdin: {
+      on() {},
       end(input = '') {
         if (process.env.FAKE_EXEC_LOG) appendFileSync(process.env.FAKE_EXEC_LOG, JSON.stringify({ file, args, input }) + '\n')
         if (file === '/usr/bin/security' && args[0] === 'find-generic-password') {

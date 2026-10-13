@@ -92,8 +92,8 @@ test('control characters are removed, a value left empty is left out, and long v
   assert.equal(device.name, '中'.repeat(255))
 })
 
-test('Windows and Linux report nothing and run nothing', async () => {
-  for (const platform of ['win32', 'linux'] as const) {
+test('Linux reports nothing and runs nothing', async () => {
+  for (const platform of ['linux'] as const) {
     const fake = deviceRunner()
     let usernameCalls = 0
     const device = await collectDevice({

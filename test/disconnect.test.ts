@@ -106,8 +106,8 @@ test('the preview reads only: no API call, no keychain change, no file change', 
 
     assert.equal(out.status, 'preview')
     assert.deepEqual(out.will_remove, [
-      `The Nortia key saved on this Mac (${PREFIX}…); Nortia stops accepting it`,
-      'The Hiredly password saved on this Mac',
+      `The Nortia key saved on this computer (${PREFIX}…); Nortia stops accepting it`,
+      'The Hiredly password saved on this computer',
       'The folder ~/.nortia',
       'The daily task nortia-hiredly in Claude Desktop',
       '4 Nortia permission rules in ~/.claude/settings.json',
@@ -116,8 +116,8 @@ test('the preview reads only: no API call, no keychain change, no file change', 
     ])
     for (const part of [
       'AskUserQuestion',
-      '"Disconnect Nortia from this Mac?"',
-      '"Yes, disconnect this Mac"',
+      '"Disconnect Nortia from this computer?"',
+      '"Yes, disconnect this computer"',
       '"Pause the daily run instead"',
       '"No, keep it"',
       'confirm: true',
@@ -177,7 +177,7 @@ test('Disconnect revokes the key with the key itself, then clears this Mac', asy
     const script = dialog.args.filter((_, i) => dialog.args[i - 1] === '-e').join('\n')
     assert.ok(script.includes('buttons {"Cancel", "Disconnect"} default button "Cancel"'))
     assert.ok(script.includes('giving up after 120'))
-    assert.ok(!script.includes('Nortia from this Mac'), 'the text travels as argv, not inside the script')
+    assert.ok(!script.includes('Nortia from this computer'), 'the text travels as argv, not inside the script')
 
     assert.equal(api.requests.length, 1)
     assert.equal(api.requests[0].method, 'POST')
@@ -220,7 +220,7 @@ test('Disconnect revokes the key with the key itself, then clears this Mac', asy
       'list_scheduled_tasks',
       'delete_scheduled_task with taskId nortia-hiredly',
       'claude mcp remove nortia --scope user',
-      '"Nortia disconnected from this Mac."',
+      '"Nortia disconnected from this computer."',
       '"Still to do:"',
       '"You can now delete the Nortia setup conversations in Claude."',
       'Do not call disconnect again.'
@@ -393,7 +393,7 @@ test('settings that are not valid JSON are left byte for byte, and Claude is ask
     assert.ok(out.next_steps.some((s) => s.startsWith('Edit ~/.claude/settings.json:') && s.includes('starts with mcp__nortia__')))
     assert.deepEqual(out.removed_rules, ['mcp__nortia__hiredly_sync'], 'the other settings file is still cleaned')
     const last = out.next_steps.at(-1)!
-    assert.ok(last.includes('"Nortia disconnected from this Mac."'))
+    assert.ok(last.includes('"Nortia disconnected from this computer."'))
   } finally {
     t.cleanup()
   }
@@ -461,13 +461,13 @@ test('a symlinked settings.json is edited where it points, and stays a link', as
   }
 })
 
-test('Windows is not supported yet and nothing runs', async () => {
+test('Linux is not supported yet and nothing runs', async () => {
   const t = makeHome()
   try {
     const fake = fakeRunner({ keychain: keychain(), dialog: CONFIRMED })
     const before = treeHash(t.root)
     for (const fn of [inspectDisconnect, runDisconnect]) {
-      const out = await fn(depsFor(t, fake.runner, { platform: 'win32' }))
+      const out = await fn(depsFor(t, fake.runner, { platform: 'linux' }))
       assert.equal(out.status, 'not_supported_yet')
     }
     assert.equal(fake.calls.length, 0)
@@ -480,7 +480,7 @@ test('Windows is not supported yet and nothing runs', async () => {
 test('a revoked key tells the user how to remove Nortia from the computer', () => {
   assert.ok(
     statusMessage('api_key_invalid', { submitted: 0, matched: 0, failed: 0 }).endsWith(
-      'To remove Nortia from this computer instead, tell Claude: "Disconnect Nortia from this Mac".'
+      'To remove Nortia from this computer instead, tell Claude: "Disconnect Nortia from this computer".'
     )
   )
 })
