@@ -29,7 +29,7 @@ const opts = (over: Partial<BatchOptions> = {}): BatchOptions => ({
   log: () => {},
   ...over
 })
-const memory = () => ({ handled: new Set<string>(), finishedJobs: new Set<string>() })
+const memory = () => ({ handled: new Set<string>(), finishedJobs: new Set<string>(), postingsReported: false, closedOnPlatform: new Map<string, string>() })
 const client = () => new NortiaClient(api.url, VALID_KEY)
 
 function runDeps(adapter: ReturnType<typeof fakeHiredly>['adapter']): SyncDeps {

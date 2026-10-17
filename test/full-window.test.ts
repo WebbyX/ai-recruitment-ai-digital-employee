@@ -11,7 +11,7 @@ import { VALID_KEY } from './helpers/harness'
 type FakeApi = Awaited<ReturnType<typeof startFakeApi>>
 
 const OLD = '2020-01-01T00:00:00'
-const memory = () => ({ handled: new Set<string>(), finishedJobs: new Set<string>() })
+const memory = () => ({ handled: new Set<string>(), finishedJobs: new Set<string>(), postingsReported: false, closedOnPlatform: new Map<string, string>() })
 const opts = (fullWindow: boolean): BatchOptions => ({
   maxNew: 25,
   dryRun: false,

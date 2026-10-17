@@ -71,6 +71,12 @@ export async function startFakeApi(opts: { latest?: string; sync?: unknown } = {
     if (rec.method === 'POST' && rec.path === '/api/v1/runs') {
       return send(200, { status: true, message: 'Recorded.', data: { recorded: true } })
     }
+    if (rec.method === 'POST' && rec.path === '/api/v1/postings') {
+      return send(200, { status: true, message: 'Recorded.', data: { received: rec.json.postings.length, closed: 0 } })
+    }
+    if (rec.method === 'POST' && rec.path === '/api/v1/resumes/closed-on-platform') {
+      return send(200, { status: true, message: 'Recorded.', data: { received: rec.json.applications.length, closed: 0 } })
+    }
     if (rec.method === 'POST' && rec.path === '/api/v1/disconnect') {
       return send(200, { status: true, message: 'Disconnected.', data: { prefix: 'nrt_abcdefgh' } })
     }

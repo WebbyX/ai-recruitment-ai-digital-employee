@@ -15,6 +15,7 @@ import {
   classifyHiredlyError,
   emptyCounts,
   fromApiError,
+  PLATFORM,
   syncBatch,
   type Counts,
   type RunMemory
@@ -27,6 +28,7 @@ export const DEFAULT_MAX_NEW = 25
 const MAX_CALLS = 8
 const REPLAY_MS = 10 * 60_000
 const IDLE_MS = 30 * 60_000
+const CLOSURES_PER_REQUEST = 200
 
 export interface SyncDeps {
   config: Config
@@ -75,7 +77,8 @@ function toOutcome(status: Status): RunReport['outcome'] | null {
  * on the 8th call. Every call is reported to Nortia, and a call within 10 minutes of the
  * end replays the final result instead of starting a fresh (empty) run. A run nobody has
  * called for 30 minutes is abandoned, so the next call starts over from the top.
- * When Nortia says the previous run did not finish ok, every batch of this run walks the whole fetch window.
+ * When Nortia says the previous run did not finish ok, or that the daily check of decided applications is due,
+ * every batch of this run walks the whole fetch window.
  */
 export class HiredlyRun {
   private active: ActiveRun | null = null
@@ -96,7 +99,7 @@ export class HiredlyRun {
       calls: 0,
       lastCallAt: now,
       totals: emptyCounts(),
-      memory: { handled: new Set(), finishedJobs: new Set() },
+      memory: { handled: new Set(), finishedJobs: new Set(), postingsReported: false, closedOnPlatform: new Map() },
       client: null,
       adapter: null,
       updateAvailable: false,
@@ -108,7 +111,7 @@ export class HiredlyRun {
     let status: Status
     let code: string | undefined
     let more = false
-    const failure = await this.prepare(run)
+    const failure = await this.prepare(run, true)
     if (failure) {
       status = failure.status
       code = failure.code
@@ -125,6 +128,7 @@ export class HiredlyRun {
       status = batch.status
       code = batch.code
       more = batch.more
+      await this.reportClosures(run)
     }
     run.lastCallAt = this.deps.now().getTime()
 
@@ -154,7 +158,7 @@ export class HiredlyRun {
 
   private async dryRun(maxNew: number): Promise<SyncResponse> {
     const session: Session = { client: null, adapter: null, updateAvailable: false, fullWindow: false }
-    const failure = await this.prepare(session)
+    const failure = await this.prepare(session, false)
     const counts = emptyCounts()
     let status: Status
     let code: string | undefined
@@ -164,7 +168,7 @@ export class HiredlyRun {
       status = failure.status
       code = failure.code
     } else {
-      const batch = await syncBatch(session.adapter!, session.client!, { handled: new Set(), finishedJobs: new Set() }, {
+      const batch = await syncBatch(session.adapter!, session.client!, { handled: new Set(), finishedJobs: new Set(), postingsReported: false, closedOnPlatform: new Map() }, {
         maxNew,
         dryRun: true,
         cutoff: cutoffFor(this.deps.now(), this.deps.config.maxAgeDays),
@@ -190,7 +194,7 @@ export class HiredlyRun {
     }
   }
 
-  private async prepare(session: Session): Promise<Failure | null> {
+  private async prepare(session: Session, forSync: boolean): Promise<Failure | null> {
     if (session.client && session.adapter) return null
     const { config } = this.deps
     try {
@@ -199,11 +203,13 @@ export class HiredlyRun {
         const key = await this.deps.getSecret('nortia_api_key')
         if (!key) return { status: 'not_configured' }
         session.client = new NortiaClient(config.apiUrl, key, this.deps.device ? await this.deps.device() : {})
-        const me = await session.client.me()
+        const me = await session.client.me(forSync)
         if (!me.ok) return fromApiError(me.code, me.detail)
         session.updateAvailable = isOlder(KIT_VERSION, me.data.kit?.latest_version ?? KIT_VERSION)
-        session.fullWindow = me.data.sync?.full_window === true
-        if (session.fullWindow) this.deps.log('previous run did not finish cleanly; this run walks the whole fetch window')
+        const sweep = forSync && me.data.sync?.status_sweep === true
+        session.fullWindow = me.data.sync?.full_window === true || sweep
+        if (me.data.sync?.full_window === true) this.deps.log('previous run did not finish cleanly; this run walks the whole fetch window')
+        else if (sweep) this.deps.log('daily check of decided applications; this run walks the whole fetch window')
       }
       if (!config.hiredlyEmail) return { status: 'not_configured' }
       const password = await this.deps.getSecret('hiredly_password')
@@ -219,6 +225,23 @@ export class HiredlyRun {
       return null
     } catch (err) {
       return { status: 'error', code: String(err instanceof Error ? err.message : err) === 'not_supported_yet' ? 'not_supported_yet' : 'setup_failed' }
+    }
+  }
+
+  private async reportClosures(run: ActiveRun): Promise<void> {
+    const closures = [...run.memory.closedOnPlatform].map(([id, state]) => ({ external_application_id: id, state }))
+    run.memory.closedOnPlatform.clear()
+    for (let i = 0; i < closures.length; i += CLOSURES_PER_REQUEST) {
+      try {
+        const res = await run.client!.reportClosedOnPlatform(PLATFORM, closures.slice(i, i + CLOSURES_PER_REQUEST))
+        if (!res.ok) {
+          this.deps.log(`closed-on-platform report not recorded: ${res.code} ${res.detail}`)
+          return
+        }
+      } catch (err) {
+        this.deps.log(`closed-on-platform report failed: ${String(err instanceof Error ? err.message : err).slice(0, 200)}`)
+        return
+      }
     }
   }
 

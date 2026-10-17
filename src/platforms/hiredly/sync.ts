@@ -1,4 +1,4 @@
-import type { ApiErrorCode, NortiaClient, ResumeMeta } from '../../api/client'
+import type { ApiErrorCode, NortiaClient, PostingReport, ResumeMeta } from '../../api/client'
 import { parseAppliedAt } from './age-window'
 import type { Adapter, ScrapedApplication, ScrapedJob } from './types'
 
@@ -9,6 +9,7 @@ export const MAX_RESUME_BYTES = 10240 * 1024
 const EARLY_STOP = 5
 const OLD_STOP = 5
 const MAX_PAGES = 50
+const MAX_POSTINGS = 2000
 
 export interface Counts {
   submitted: number
@@ -44,6 +45,8 @@ export function addCounts(into: Counts, from: Counts): void {
 export interface RunMemory {
   handled: Set<string>
   finishedJobs: Set<string>
+  postingsReported: boolean
+  closedOnPlatform: Map<string, string>
 }
 
 export type BatchStatus = 'ok' | 'login_rejected' | 'blocked' | 'kit_outdated' | 'api_key_invalid' | 'rate_limited' | 'error'
@@ -86,6 +89,7 @@ export function classifyHiredlyError(err: unknown): { status: BatchStatus; code?
  * most `maxNew` new resumes straight from memory. Stops early (`more: true`) when the
  * cap is reached, and immediately on any Nortia answer other than a per-resume failure.
  * With fullWindow, known rows never end a job early; only the fetch window does.
+ * The first batch of a run that is not a dry run also reports the whole job list to Nortia.
  */
 export async function syncBatch(
   adapter: Adapter,
@@ -105,7 +109,12 @@ export async function syncBatch(
   })
 
   try {
-    const jobs = (await adapter.listJobs()).filter((job) => job.active !== false)
+    const all = await adapter.listJobs()
+    if (!opts.dryRun && !memory.postingsReported) {
+      memory.postingsReported = true
+      await reportPostings(api, all, opts.log)
+    }
+    const jobs = all.filter((job) => job.active !== false)
 
     for (const job of jobs) {
       if (memory.finishedJobs.has(job.jobExternalId)) continue
@@ -149,6 +158,7 @@ export async function syncBatch(
           if (app.state !== null && adapter.closedStates.has(app.state)) {
             memory.handled.add(id)
             counts.skipped_closed++
+            if (!opts.dryRun && knownIds.has(id)) memory.closedOnPlatform.set(id, app.state)
             continue
           }
 
@@ -219,6 +229,27 @@ export async function syncBatch(
     opts.log(`hiredly: ${String(err instanceof Error ? err.message : err).slice(0, 200)}`)
     const s = classifyHiredlyError(err)
     return end(s.status, false, s.code)
+  }
+}
+
+async function reportPostings(api: NortiaClient, jobs: ScrapedJob[], log: (line: string) => void): Promise<void> {
+  try {
+    const postings: PostingReport[] = jobs
+      .filter((job) => job.jobExternalId && typeof job.jobTitle === 'string' && job.jobTitle.trim() !== '')
+      .slice(0, MAX_POSTINGS)
+      .map((job) => {
+        const n = job.applicantCount
+        return {
+          external_job_id: job.jobExternalId,
+          title: Array.from(job.jobTitle).slice(0, 255).join(''),
+          active: job.active,
+          applicant_count: typeof n === 'number' && Number.isInteger(n) && n >= 0 ? n : null
+        }
+      })
+    const res = await api.reportPostings(PLATFORM, postings)
+    if (!res.ok) log(`job list not recorded: ${res.code} ${res.detail}`)
+  } catch (err) {
+    log(`job list report failed: ${String(err instanceof Error ? err.message : err).slice(0, 200)}`)
   }
 }
 

@@ -12,7 +12,7 @@ export interface MeData {
   key: { name: string; prefix: string }
   platforms: { code: string; name: string }[]
   kit: { latest_version: string; min_version: string }
-  sync?: { full_window?: boolean }
+  sync?: { full_window?: boolean; status_sweep?: boolean }
 }
 
 export interface ResumeMeta {
@@ -29,6 +29,18 @@ export interface ResumeMeta {
 export interface SubmitData {
   outcome: 'received' | 'duplicate'
   titleMatch: TitleMatch
+}
+
+export interface PostingReport {
+  external_job_id: string
+  title: string
+  active: boolean | null
+  applicant_count: number | null
+}
+
+export interface ClosedOnPlatform {
+  external_application_id: string
+  state: string
 }
 
 export type TitleMatch = 'matched' | 'no_title_match' | 'ambiguous_title' | 'unknown'
@@ -63,8 +75,8 @@ export class NortiaClient {
     this.base = apiUrl.replace(/\/+$/, '') + '/api/v1/'
   }
 
-  me(): Promise<ApiResult<MeData>> {
-    return this.request<MeData>('GET', 'me')
+  me(forSync = false): Promise<ApiResult<MeData>> {
+    return this.request<MeData>('GET', 'me', forSync ? { headers: { 'x-nortia-purpose': 'sync' } } : {})
   }
 
   async lookup(platform: string, ids: string[]): Promise<ApiResult<Set<string>>> {
@@ -98,6 +110,14 @@ export class NortiaClient {
     return this.request('POST', 'runs', { json: report })
   }
 
+  reportPostings(platform: string, postings: PostingReport[]): Promise<ApiResult<unknown>> {
+    return this.request('POST', 'postings', { json: { platform, postings } })
+  }
+
+  reportClosedOnPlatform(platform: string, applications: ClosedOnPlatform[]): Promise<ApiResult<unknown>> {
+    return this.request('POST', 'resumes/closed-on-platform', { json: { platform, applications } })
+  }
+
   disconnect(): Promise<ApiResult<unknown>> {
     return this.request('POST', 'disconnect')
   }
@@ -105,7 +125,7 @@ export class NortiaClient {
   private async request<T>(
     method: 'GET' | 'POST',
     path: string,
-    body: { json?: unknown; form?: FormData; timeoutMs?: number } = {}
+    body: { json?: unknown; form?: FormData; timeoutMs?: number; headers?: Record<string, string> } = {}
   ): Promise<ApiResult<T>> {
     const headers: Record<string, string> = {
       accept: 'application/json',
@@ -118,6 +138,7 @@ export class NortiaClient {
       const encoded = value ? encodeHeader(value) : null
       if (encoded !== null) headers[header] = encoded
     }
+    Object.assign(headers, body.headers)
     let payload: string | FormData | undefined
     if (body.json !== undefined) {
       headers['content-type'] = 'application/json'

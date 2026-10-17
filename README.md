@@ -5,9 +5,10 @@ resumes from **your own** hiring-platform account and send them into **your**
 Nortia workspace. It runs on your computer as a local MCP server for Claude
 Desktop; nothing is installed on Nortia's side.
 
-Resumes arrive in Nortia → AI Digital Employee → Resume. A resume whose job
-title exactly matches one of your active jobs is assigned automatically; the
-rest wait there for you to assign or close.
+Resumes arrive in Nortia → AI Digital Employee → Resume. When your workspace
+turns auto-assign on, a resume goes to its job automatically: first by the
+platform posting linked on the job's page, then by an exact job title match.
+The rest wait there for you to assign or close.
 
 ## Requirements
 
@@ -42,6 +43,13 @@ To stop: tell Claude "Disconnect Nortia from this computer".
   computer's name, your user name on it and its serial number with each request;
   Nortia keeps them with the key and records the internet address each resume
   came from.
+- Each run also sends your Hiredly job list (job id, title, open or closed,
+  applicant count) so your team can link postings to Nortia jobs. It sends no
+  candidate details with it.
+- When an application you already sent is rejected, offered or blacklisted on
+  Hiredly, the connector tells Nortia, which closes its waiting copy. To catch
+  these, about once a day a run reads every application in your fetch window
+  instead of stopping at the ones Nortia already has.
 
 ## Roadmap
 
